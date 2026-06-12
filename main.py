@@ -145,7 +145,15 @@ GEMINI_API_KEY = "AIzaSyDWDpjaaj28ZKoNS2OGfO8Z2JJZCdUjyWA"
 @st.cache_resource
 def init_connections():
     scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-    creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+    # 🔍 FIX: Check if running on Streamlit Cloud using Secrets
+    if "gcp_service_account" in st.secrets:
+        # Read credentials directly from the Streamlit Secrets vault
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    else:
+        # Fallback for your local machine testing
+        creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+        
     gc = gspread.authorize(creds)
     sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
     ai_client = genai.Client(api_key=GEMINI_API_KEY)
