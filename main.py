@@ -145,10 +145,14 @@ GEMINI_API_KEY = "AIzaSyDWDpjaaj28ZKoNS2OGfO8Z2JJZCdUjyWA"
 @st.cache_resource
 def init_connections():
     scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-    # 🔍 FIX: Check if running on Streamlit Cloud using Secrets
+    # 🔍 Check if running on Streamlit Cloud using Secrets
     if "gcp_service_account" in st.secrets:
         # Read credentials directly from the Streamlit Secrets vault
         creds_dict = dict(st.secrets["gcp_service_account"])
+        
+        # ✨ THE CRUCIAL FIX: Convert literal "\n" text into actual hidden newlines
+        creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+        
         creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     else:
         # Fallback for your local machine testing
