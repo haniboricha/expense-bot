@@ -1,0 +1,88 @@
+# import os
+# import json
+# import gspread
+# from google import genai
+# from google.oauth2.service_account import Credentials
+# from watchdog.observers import Observer
+# from watchdog.events import FileSystemEventHandler
+
+# # --- CONFIGURATION ---
+# # Replace with your actual Spreadsheet ID from the URL
+# SPREADSHEET_ID = "1_5_eINIDbQ9A-t5HV14EPerCnEFXYXGrVjp2DJQFnwg"
+# # Replace with your Gemini API Key
+# GEMINI_API_KEY = "AIzaSyDWDpjaaj28ZKoNS2OGfO8Z2JJZCdUjyWA"
+
+# # 1. Setup Google Sheets
+# scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+# creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+# gc = gspread.authorize(creds)
+# sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
+
+# # 2. Setup Gemini
+# ai_client = genai.Client(api_key=GEMINI_API_KEY)
+
+# class ReceiptProcessor(FileSystemEventHandler):
+#     def on_created(self, event):
+#         if not event.is_directory and event.src_path.lower().endswith(('.jpg', '.jpeg', '.png')):
+#             print(f"📸 New receipt found: {os.path.basename(event.src_path)}")
+#             self.process(event.src_path)
+
+#     def process(self, file_path):
+#         try:
+#             # Read image
+#             with open(file_path, "rb") as img:
+#                 image_bytes = img.read()
+
+#             # Determine mime type
+#             ext = file_path.lower()
+#             mime_type = "image/png" if ext.endswith(".png") else "image/jpeg"
+
+#             from google.genai import types
+            
+#             # Use Gemini 3 Flash (The 2026 standard)
+#             response = ai_client.models.generate_content(
+#                 model="gemini-3-flash-preview",
+#                 contents=[
+#                     "Extract receipt data to JSON: {date, vendor, amount, category}. "
+#                     "Only return JSON code.",
+#                     types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+#                 ]
+#             )
+            
+#             # Robust JSON cleaning
+#             raw_text = response.text.strip()
+#             if "```" in raw_text:
+#                 raw_text = raw_text.split("```")[1]
+#                 if raw_text.startswith("json"):
+#                     raw_text = raw_text[4:]
+            
+#             data = json.loads(raw_text.strip())
+            
+#             # Append to Google Sheet
+#             sheet.append_row([
+#                 data.get('date', '2026-04-24'), 
+#                 data.get('vendor', 'Unknown'), 
+#                 data.get('amount', 0), 
+#                 data.get('category', 'Misc')
+#             ])
+            
+#             print(f"✅ Logged: {data.get('vendor')} - ₹{data.get('amount')}")
+
+#         except Exception as e:
+#             print(f"❌ Error during processing: {e}")
+
+# # --- START MONITORING ---
+# if __name__ == "__main__":
+#     if not os.path.exists("./receipts"): os.makedirs("./receipts")
+    
+#     event_handler = ReceiptProcessor()
+#     observer = Observer()
+#     observer.schedule(event_handler, path="./receipts", recursive=False)
+    
+#     print("🚀 Monitoring 'receipts' folder... Drop a photo in to start.")
+#     observer.start()
+#     try:
+#         while True: pass
+#     except KeyboardInterrupt:
+#         observer.stop()
+#     observer.join()
